@@ -81,7 +81,10 @@ const MapView = (() => {
     tasks.push((async () => {
       const f = await SODA.resolveFields("permits");
       const com = f.classMapped ? `${f.classMapped} = ${SODA.q("Commercial")}` : null;
-      const rows = await SODA.recent("permits", 90, { where: [com], limit: 5000 });
+      const rows = await SODA.recent("permits", 90, {
+        where: [com], limit: 5000,
+        snapFilter: (r, ff) => !ff.classMapped || r[ff.classMapped] === "Commercial",
+      });
       for (const r of rows) {
         const pt = coords(r, f);
         if (!pt) continue;

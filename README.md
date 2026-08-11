@@ -47,6 +47,31 @@ APIs allow cross-origin requests), but a local server is the sure path.
 Settings → Pages → deploy from branch → select this branch, root folder. Done —
 it's a fully static site.
 
+## Data freshness: live + nightly snapshot
+
+The dashboard is **live-first**: every panel queries the city APIs directly from
+your browser, and the header's **Refresh** button clears the cache and refetches
+on demand.
+
+Behind that sits an automatic nightly tier. A GitHub Action
+(`.github/workflows/refresh-data.yml`) runs at **12:00 am Austin time** (05:00
+UTC; it can also be triggered manually from the repo's Actions tab), executes
+`scripts/fetch-snapshots.mjs`, and commits fresh JSON extracts of all four
+datasets to `data/`. Because GitHub Pages redeploys on every commit, the
+published site always ships with data at most one night old — and whenever a
+live API call fails (portal outage, rate limiting, a locked-down network), the
+app silently falls back to the snapshot and the header pulse turns amber with
+the snapshot's timestamp.
+
+The header therefore always tells you what you're looking at:
+
+- 🟢 `Live · fetched 9:14 AM` — everything came from the city API just now
+- 🟠 `Nightly snapshot · refreshed Aug 11, 12:02 AM` — the API was unreachable;
+  you're on last night's data
+
+The first snapshot appears after the workflow's first run (trigger it once from
+the Actions tab after enabling the repo's Actions).
+
 ## Design & architecture notes
 
 - **Schema-drift resilient**: the data layer (`js/soda.js`) resolves real column

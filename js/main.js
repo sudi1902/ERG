@@ -52,21 +52,23 @@
     location.reload();
   });
 
-  // stamp the header once any fetch has succeeded
-  const stamp = () => {
+  // header status: green = live API, amber = nightly snapshot fallback in play
+  SODA.onStatus((s) => {
     const el = document.getElementById("last-updated");
-    el.textContent = "Live · fetched " + new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  };
-  const origFetch = window.fetch;
-  let stamped = false;
-  window.fetch = async (...args) => {
-    const res = await origFetch(...args);
-    if (!stamped && res.ok && String(args[0]).includes(GW_CONFIG.portal)) {
-      stamped = true;
-      stamp();
+    const dot = document.querySelector(".pulse");
+    if (s.snapshotUsed) {
+      const when = s.snapshotAt
+        ? new Date(s.snapshotAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+        : "last nightly run";
+      el.textContent = s.liveUsed
+        ? `Live · some feeds from the nightly snapshot (${when})`
+        : `Nightly snapshot · refreshed ${when}`;
+      dot.classList.add("snap");
+    } else if (s.liveUsed) {
+      el.textContent = "Live · fetched " + new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      dot.classList.remove("snap");
     }
-    return res;
-  };
+  });
 
   // boot: honor a #hash deep link; council feed always starts (it feeds a KPI tile)
   const initial = (location.hash || "#overview").slice(1);

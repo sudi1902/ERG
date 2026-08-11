@@ -78,6 +78,11 @@ const Views = (() => {
     return f.classMapped ? `${f.classMapped} = ${SODA.q("Commercial")}` : null;
   }
 
+  /* Snapshot-side twin of whereCommercial — same semantics, in JS. */
+  function snapCommercial(r, f) {
+    return !f.classMapped || r[f.classMapped] === "Commercial";
+  }
+
   /* ================= OVERVIEW ================= */
 
   const KPI_DEFS = [
@@ -141,9 +146,9 @@ const Views = (() => {
         const com = whereCommercial(f);
 
         const [cur, prev, daily] = await Promise.all([
-          SODA.countBetween("permits", 30, 0, [com]),
-          SODA.countBetween("permits", 60, 30, [com]),
-          SODA.dailyCounts("permits", 26 * 7 + 7, [com]),
+          SODA.countBetween("permits", 30, 0, [com], { snapFilter: snapCommercial }),
+          SODA.countBetween("permits", 60, 30, [com], { snapFilter: snapCommercial }),
+          SODA.dailyCounts("permits", 26 * 7 + 7, [com], { snap: "permits_daily_com" }),
         ]);
         const weeks = weeklyBuckets(daily, 26);
         setTile("kpi-permits", {
@@ -157,7 +162,7 @@ const Views = (() => {
         let resWeeks = [];
         if (f.classMapped) {
           const resDaily = await SODA.dailyCounts("permits", 26 * 7 + 7,
-            [`${f.classMapped} = ${SODA.q("Residential")}`]);
+            [`${f.classMapped} = ${SODA.q("Residential")}`], { snap: "permits_daily_res" });
           resWeeks = weeklyBuckets(resDaily, 26);
         }
         const align = (ws) => weeks.map((w) => {
@@ -170,9 +175,11 @@ const Views = (() => {
 
         // new commercial buildings tile (work class = New, building permits)
         if (f.workClass && f.type) {
+          const newBP = [com, `${f.workClass} = ${SODA.q("New")}`, `${f.type} = ${SODA.q("BP")}`];
+          const snapNewBP = (r, ff) => snapCommercial(r, ff) && r[ff.workClass] === "New" && r[ff.type] === "BP";
           const [nb, nbPrev] = await Promise.all([
-            SODA.countBetween("permits", 30, 0, [com, `${f.workClass} = ${SODA.q("New")}`, `${f.type} = ${SODA.q("BP")}`]),
-            SODA.countBetween("permits", 60, 30, [com, `${f.workClass} = ${SODA.q("New")}`, `${f.type} = ${SODA.q("BP")}`]),
+            SODA.countBetween("permits", 30, 0, newBP, { snapFilter: snapNewBP }),
+            SODA.countBetween("permits", 60, 30, newBP, { snapFilter: snapNewBP }),
           ]);
           setTile("kpi-new", {
             value: Charts.comma(nb),
@@ -196,28 +203,19 @@ const Views = (() => {
         const com = whereCommercial(f);
         if (!f.valuation) {
           setTile("kpi-valuation", { value: "—", note: "valuation field unavailable" });
-          const byType = await SODA.groupBy("permits", "typeDesc", 30, { extraWhere: [com], limit: 8 });
+          const byType = await SODA.groupBy("permits", "typeDesc", 30, { extraWhere: [com], limit: 8, snapFilter: snapCommercial });
           Charts.hBarChart(valEl, byType.map((r) => ({ label: r.k, value: r.n })), { tipFormat: (v) => Charts.comma(v) + " permits" });
         } else {
-          const rows = await SODA.query("permits", {
-            select: `sum(${f.valuation}) AS v`,
-            where: [ `${f.date} >= '${SODA.soqlDate(SODA.daysAgo(30))}'`, com ].filter(Boolean).join(" AND "),
-          });
-          const prevRows = await SODA.query("permits", {
-            select: `sum(${f.valuation}) AS v`,
-            where: [
-              `${f.date} >= '${SODA.soqlDate(SODA.daysAgo(60))}'`,
-              `${f.date} < '${SODA.soqlDate(SODA.daysAgo(30))}'`,
-              com,
-            ].filter(Boolean).join(" AND "),
-          });
-          const v = rows[0] ? +rows[0].v : null, pv = prevRows[0] ? +prevRows[0].v : null;
+          const [v, pv] = await Promise.all([
+            SODA.sumBetween("permits", "valuation", 30, 0, [com], { snapFilter: snapCommercial }),
+            SODA.sumBetween("permits", "valuation", 60, 30, [com], { snapFilter: snapCommercial }),
+          ]);
           setTile("kpi-valuation", {
             value: Charts.money(v),
             delta: pv ? (v - pv) / pv : null,
           });
 
-          const byType = await SODA.groupBy("permits", "typeDesc", 30, { extraWhere: [com], sumRole: "valuation", limit: 8 });
+          const byType = await SODA.groupBy("permits", "typeDesc", 30, { extraWhere: [com], sumRole: "valuation", limit: 8, snapFilter: snapCommercial });
           Charts.hBarChart(valEl,
             byType.filter((r) => r.v).map((r) => ({ label: r.k, value: r.v, extra: `${Charts.comma(r.n)} permits` })),
             { format: Charts.money });
@@ -225,12 +223,7 @@ const Views = (() => {
 
         // top projects table
         const top = f.valuation
-          ? await SODA.query("permits", {
-              select: [f.date, f.typeDesc, f.desc, f.address, f.valuation, f.link, f.applicant].filter(Boolean).join(","),
-              where: [ `${f.date} >= '${SODA.soqlDate(SODA.daysAgo(30))}'`, com, `${f.valuation} > 0` ].filter(Boolean).join(" AND "),
-              order: `${f.valuation} DESC`,
-              limit: 7,
-            })
+          ? await SODA.topBy("permits", "valuation", 30, { extraWhere: [com], limit: 7, snapFilter: snapCommercial })
           : [];
         if (!top.length) {
           topEl.innerHTML = '<p class="chart-empty">No valuation data in this window.</p>';
@@ -306,6 +299,7 @@ const Views = (() => {
       if (cls && f.classMapped) where.push(`${f.classMapped} = ${SODA.q(cls)}`);
       permitState.rows = await SODA.recent("permits", windowDays, {
         where, limit: windowDays > 30 ? 5000 : 2500,
+        snapFilter: cls ? (r, ff) => !ff.classMapped || r[ff.classMapped] === cls : null,
       });
       permitState.shown = 100;
       hydratePermitFilterOptions();

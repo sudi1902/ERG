@@ -1,0 +1,49 @@
+name: Nightly data refresh
+
+# Fetches fresh snapshots of the Austin open-data feeds and commits
+# them to data/. GitHub Pages redeploys on the commit, so the
+# published dashboard wakes up with data at most one night old even
+# for visitors whose browsers can't reach the city API directly.
+#
+# Schedule: 05:00 UTC = 12:00 am Austin time during daylight saving
+# (Mar–Nov); 11:00 pm the rest of the year. GitHub cron has no
+# timezone support, so pick your poison — or adjust to "0 6 * * *"
+# for midnight CST. The workflow can also be run on demand from the
+# Actions tab (workflow_dispatch).
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch snapshots from data.austintexas.gov
+        run: node scripts/fetch-snapshots.mjs
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "Snapshots unchanged — nothing to commit."
+          else
+            git commit -m "chore: nightly data snapshot refresh"
+            git push
+          fi

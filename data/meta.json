@@ -24,14 +24,17 @@
         "contractor": "contractor_company_name",
         "sqftNew": "total_new_add_sqft",
         "sqftRemodel": "remodel_repair_sqft"
-      }
+      },
+      "commercialOnly": true
     },
     "zoning": {
       "fields": {
         "date": "status_date",
+        "applied": "application_start_date",
         "number": "case_number",
         "name": "case_name",
-        "desc": "proposed_zoning",
+        "desc": "description_of_work",
+        "caseType": "sub_type",
         "status": "detailed_status",
         "manager": "case_manager",
         "address": "site_address",
@@ -48,8 +51,11 @@
         "date": "issue_date",
         "number": "permit_number",
         "type": "permit_type_desc",
+        "classMapped": "permit_class_mapped",
+        "workClass": "work_class",
         "use": "description",
         "desc": "description",
+        "valuation": "total_job_valuation",
         "status": "status_current",
         "address": "original_address1",
         "district": "council_district",
@@ -61,20 +67,22 @@
     "council": {
       "fields": {
         "date": "agenda_date",
-        "title": null,
+        "title": "posting_language",
         "item": "item_number",
+        "itemType": "request_type",
         "dept": "lead_dept",
+        "sponsor": "sponsor",
         "status": "status",
         "district": null,
-        "caseNo": null,
-        "link": null,
+        "caseNo": "request_number",
+        "link": "attachments",
         "lat": null,
         "lon": null
       }
     }
   },
   "files": {
-    "permits_recent": 8000,
+    "permits_recent": 2271,
     "zoning_recent": 426,
     "co_recent": 1772,
     "council_recent": 10,

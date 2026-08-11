@@ -163,7 +163,7 @@ const Charts = (() => {
     const pts0 = series[0] ? series[0].points : [];
     if (!pts0.length) return empty(container);
     const W = container.clientWidth || 560;
-    const H = 230, padL = 44, padR = 86, padT = 14, padB = 26;
+    const H = 230, padL = 44, padR = 112, padT = 14, padB = 26;
     const iw = W - padL - padR, ih = H - padT - padB;
     const n = pts0.length;
     const max = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.value)));

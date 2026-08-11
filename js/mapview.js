@@ -8,10 +8,10 @@
 
 const MapView = (() => {
   const LAYER_DEFS = {
-    building: { color: "#2a78d6", label: "Building permit" },
-    trades:   { color: "#eb6834", label: "Trade permit" },
-    zoning:   { color: "#1baf7a", label: "Zoning case" },
-    co:       { color: "#4a3aa7", label: "Certificate of occupancy" },
+    building: { color: "#2a78d6", label: "Building permit", plural: "Building permits" },
+    trades:   { color: "#eb6834", label: "Trade permit", plural: "Trade permits" },
+    zoning:   { color: "#1baf7a", label: "Zoning case", plural: "Zoning cases" },
+    co:       { color: "#4a3aa7", label: "Certificate of occupancy", plural: "Certificates of occupancy" },
   };
 
   let map = null;
@@ -127,7 +127,11 @@ const MapView = (() => {
 
     tasks.push((async () => {
       const f = await SODA.resolveFields("co");
-      const rows = await SODA.recent("co", 90, { limit: 3000 });
+      const com = f.classMapped ? `${f.classMapped} = ${SODA.q("Commercial")}` : null;
+      const rows = await SODA.recent("co", 90, {
+        where: [com], limit: 3000,
+        snapFilter: (r, ff) => !ff.classMapped || r[ff.classMapped] === "Commercial",
+      });
       for (const r of rows) {
         const pt = coords(r, f);
         if (!pt) continue;
@@ -193,7 +197,7 @@ const MapView = (() => {
       <p class="status-note">${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)} · trailing 90d (zoning 365d)</p>
       <div class="report-stat-row">
         ${Object.entries(LAYER_DEFS).map(([k, def]) =>
-          `<div class="report-stat"><b style="color:${def.color}">${counts[k] || 0}</b>${def.label}s</div>`).join("")}
+          `<div class="report-stat"><b style="color:${def.color}">${counts[k] || 0}</b>${def.plural}</div>`).join("")}
       </div>
       ${hits.length ? `<ul class="report-list">${hits.slice(0, 30).map((h) => `
         <li>

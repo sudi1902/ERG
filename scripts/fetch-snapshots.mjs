@@ -84,8 +84,11 @@ function save(name, data) {
 
 let okCount = 0;
 
-async function snapRecent(dsKey, days, limit, fields) {
-  const clauses = fields.date ? [`${fields.date} >= '${soqlDate(daysAgo(days))}'`] : [];
+async function snapRecent(dsKey, days, limit, fields, extraWhere = []) {
+  const clauses = [
+    ...(fields.date ? [`${fields.date} >= '${soqlDate(daysAgo(days))}'`] : []),
+    ...extraWhere,
+  ];
   const rows = await getJSON(resourceURL(dsKey, {
     where: clauses.join(" AND ") || undefined,
     order: fields.date ? `${fields.date} DESC` : undefined,
@@ -106,17 +109,25 @@ async function snapDaily(name, dsKey, days, fields, extraWhere) {
   save(name, rows.filter((r) => r.d).map((r) => ({ d: r.d.slice(0, 10), n: +r.n })));
 }
 
+/* Permits and COs are snapshotted commercial-only (this is a CRE tool,
+   and the all-class feed is ~4× the rows for the same window); zoning
+   and council carry everything. The council window spans the whole
+   dataset (Feb 2024–present) — agenda items are sparse and include
+   future meeting dates. */
 for (const [dsKey, spec] of Object.entries({
-  permits: { days: 90, limit: 8000 },
+  permits: { days: 90, limit: 8000, commercialOnly: true },
   zoning: { days: 365, limit: 1500 },
-  co: { days: 90, limit: 3000 },
-  council: { days: 150, limit: 5000 },
+  co: { days: 90, limit: 3000, commercialOnly: true },
+  council: { days: 999, limit: 5000 },
 })) {
   console.log(`Fetching ${dsKey} (${GW_CONFIG.datasets[dsKey].id})…`);
   try {
     const fields = await resolveFields(dsKey);
-    meta.datasets[dsKey] = { fields };
-    await snapRecent(dsKey, spec.days, spec.limit, fields);
+    const extra = spec.commercialOnly && fields.classMapped
+      ? [`${fields.classMapped} = 'Commercial'`]
+      : [];
+    meta.datasets[dsKey] = { fields, commercialOnly: extra.length > 0 };
+    await snapRecent(dsKey, spec.days, spec.limit, fields, extra);
     okCount++;
   } catch (e) {
     console.error(`  FAILED ${dsKey}: ${e.message}`);

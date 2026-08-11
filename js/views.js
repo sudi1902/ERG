@@ -89,9 +89,9 @@ const Views = (() => {
     { id: "kpi-permits", label: "Commercial permits · 30d" },
     { id: "kpi-valuation", label: "Commercial valuation · 30d" },
     { id: "kpi-new", label: "New commercial buildings · 30d" },
-    { id: "kpi-co", label: "Certificates of occupancy · 30d" },
+    { id: "kpi-co", label: "Commercial C of O · 30d" },
     { id: "kpi-zoning", label: "Zoning cases · 90d" },
-    { id: "kpi-council", label: "CRE council items · ±30d" },
+    { id: "kpi-council", label: "CRE council items · ±90d" },
   ];
 
   function tileShell() {
@@ -216,15 +216,33 @@ const Views = (() => {
           });
 
           const byType = await SODA.groupBy("permits", "typeDesc", 30, { extraWhere: [com], sumRole: "valuation", limit: 8, snapFilter: snapCommercial });
-          Charts.hBarChart(valEl,
-            byType.filter((r) => r.v).map((r) => ({ label: r.k, value: r.v, extra: `${Charts.comma(r.n)} permits` })),
-            { format: Charts.money });
+          const withVal = byType.filter((r) => r.v);
+          if (withVal.length >= 2) {
+            Charts.hBarChart(valEl,
+              withVal.map((r) => ({ label: r.k, value: r.v, extra: `${Charts.comma(r.n)} permits` })),
+              { format: Charts.money });
+          } else {
+            // valuation is only declared on building permits — count volume is the honest comparison
+            const sub = valEl.closest(".card")?.querySelector(".card-sub");
+            if (sub) sub.textContent = "Commercial permits issued by type, trailing 30 days (valuation is only declared on building permits)";
+            Charts.hBarChart(valEl,
+              byType.map((r) => ({ label: r.k, value: r.n, extra: r.v ? Charts.money(r.v) + " declared" : null })),
+              { tipFormat: (v) => Charts.comma(v) + " permits" });
+          }
         }
 
-        // top projects table
-        const top = f.valuation
-          ? await SODA.topBy("permits", "valuation", 30, { extraWhere: [com], limit: 7, snapFilter: snapCommercial })
+        // top projects table — phased projects file several permits at one
+        // address with the same declared total, so dedupe by address
+        let top = f.valuation
+          ? await SODA.topBy("permits", "valuation", 30, { extraWhere: [com], limit: 24, snapFilter: snapCommercial })
           : [];
+        const seenAddr = new Set();
+        top = top.filter((r) => {
+          const key = String(r[f.address] || Math.random()).trim().toUpperCase();
+          if (seenAddr.has(key)) return false;
+          seenAddr.add(key);
+          return true;
+        }).slice(0, 7);
         if (!top.length) {
           topEl.innerHTML = '<p class="chart-empty">No valuation data in this window.</p>';
         } else {
@@ -248,13 +266,15 @@ const Views = (() => {
       }
     })();
 
-    /* --- certificates of occupancy tile --- */
+    /* --- certificates of occupancy tile (commercial only) --- */
     (async () => {
       try {
+        const f = await SODA.resolveFields("co");
+        const com = whereCommercial(f);
         const [cur, prev, daily] = await Promise.all([
-          SODA.countBetween("co", 30, 0),
-          SODA.countBetween("co", 60, 30),
-          SODA.dailyCounts("co", 12 * 7),
+          SODA.countBetween("co", 30, 0, [com], { snapFilter: snapCommercial }),
+          SODA.countBetween("co", 60, 30, [com], { snapFilter: snapCommercial }),
+          SODA.dailyCounts("co", 12 * 7, [com], { snapFilter: snapCommercial }),
         ]);
         setTile("kpi-co", {
           value: Charts.comma(cur),
@@ -420,7 +440,7 @@ const Views = (() => {
         .map(([k, v]) => `<dt>${esc(k.replace(/_/g, " "))}</dt><dd>${esc(String(v).slice(0, 220))}</dd>`)
         .join("");
       return `<div class="case-card">
-        <div class="case-status">${esc(r[f.status] || "status n/a")}</div>
+        <div class="case-status">${esc(r[f.status] || "status n/a")}${f.caseType && r[f.caseType] ? " · " + esc(r[f.caseType]) : ""}</div>
         <h3>${esc(number)}</h3>
         ${title ? `<p>${esc(title)}</p>` : ""}
         ${r[f.desc] ? `<p>${esc(String(r[f.desc]).slice(0, 180))}</p>` : ""}
@@ -464,7 +484,14 @@ const Views = (() => {
     try {
       const f = await SODA.resolveFields("council");
       councilState.f = f;
-      councilState.rows = await SODA.recent("council", 150, { limit: 5000 });
+      const rows = await SODA.recent("council", 999, { limit: 5000 });
+      // scrub training/test rows the city leaves in the dataset
+      councilState.rows = rows.filter((r) => {
+        if (/^\s*TRAINING/i.test(String(r[f.title] || ""))) return false;
+        if (String(r[f.item] || "").toLowerCase() === "test") return false;
+        const d = parseDate(r[f.date]);
+        return !(d && d.getTime() - Date.now() > 400 * 86400000);
+      });
       drawCouncil();
       updateCouncilTile();
     } catch (e) {
@@ -482,7 +509,7 @@ const Views = (() => {
     const now = Date.now();
     const flagged = councilState.rows.filter((r) => {
       const d = parseDate(r[f.date]);
-      if (!d || Math.abs(d - now) > 30 * 86400000) return false;
+      if (!d || Math.abs(d - now) > 90 * 86400000) return false;
       return matchKeywords(rowText(r)).length > 0;
     });
     setTile("kpi-council", {
@@ -550,13 +577,15 @@ const Views = (() => {
         <ul class="agenda-items">${its.slice(0, 40).map(({ r, tags }) => {
           const title = r[f.title] || rowText(r).slice(0, 200);
           const url = f.link && r[f.link] && (r[f.link].url || r[f.link]);
+          const text = String(title).replace(/\s+/g, " ").trim();
           return `<li>
-            <p class="ai-text">${esc(String(title).slice(0, 320))}</p>
+            <p class="ai-text">${esc(text.slice(0, 320))}${text.length > 320 ? "…" : ""}</p>
             <div class="ai-meta">
               ${r[f.item] ? `<span>Item ${esc(r[f.item])}</span>` : ""}
+              ${f.itemType && r[f.itemType] ? `<span>${esc(r[f.itemType])}</span>` : ""}
               ${r[f.dept] ? `<span>${esc(r[f.dept])}</span>` : ""}
+              ${f.sponsor && r[f.sponsor] ? `<span>Sponsor: ${esc(r[f.sponsor])}</span>` : ""}
               ${r[f.status] ? `<span>${esc(r[f.status])}</span>` : ""}
-              ${r[f.caseNo] ? `<span>${esc(r[f.caseNo])}</span>` : ""}
               ${tags.slice(0, 3).map((t) => `<span class="kw-tag">${esc(t.label)}</span>`).join("")}
               ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">backup ↗</a>` : ""}
             </div>

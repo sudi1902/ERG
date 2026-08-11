@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/data/:file",
+      "destination": "https://raw.githubusercontent.com/sudi1902/ERG/refs/heads/claude/austin-cre-dashboard-dz9u6g/data/:file"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/data/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=600, stale-while-revalidate=3600" }
+      ]
+    }
+  ]
+}

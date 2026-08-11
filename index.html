@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Groundwork ATX — Austin CRE Permits, Zoning &amp; Council Intelligence</title>
+<meta name="description" content="Live dashboard for Austin commercial real estate: building & trade permits, zoning cases, certificates of occupancy, and City Council legislation — straight from the City of Austin open data portal.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128506;</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="mast-brand">
+      <span class="mast-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Groundwork <em>ATX</em></h1>
+        <p class="tagline">Live permits, entitlements &amp; council intelligence for Austin commercial real estate</p>
+      </div>
+    </div>
+    <div class="mast-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      <span id="last-updated">Connecting to data.austintexas.gov…</span>
+      <button id="refresh-btn" class="btn-ghost" title="Clear cache and refetch">Refresh</button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+    <button class="tab" data-tab="map" role="tab" aria-selected="false">Map explorer</button>
+    <button class="tab" data-tab="permits" role="tab" aria-selected="false">Permit pipeline</button>
+    <button class="tab" data-tab="zoning" role="tab" aria-selected="false">Zoning cases</button>
+    <button class="tab" data-tab="council" role="tab" aria-selected="false">Council watch</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="panel-overview" class="panel active" role="tabpanel">
+    <div class="kpi-row" id="kpi-row" aria-label="Key indicators">
+      <!-- stat tiles injected -->
+    </div>
+
+    <div class="lifecycle" aria-label="The entitlement-to-occupancy journey">
+      <h2 class="strip-title">The road from dirt to doors-open</h2>
+      <ol class="lifecycle-steps">
+        <li><b>Zoning / entitlement</b><span>Rezoning &amp; use approvals — tracked under <a href="#" data-goto="zoning">Zoning cases</a> and debated in <a href="#" data-goto="council">Council</a></span></li>
+        <li><b>Site plan &amp; review</b><span>Site plan, fire &amp; drainage review folders appear in the <a href="#" data-goto="permits">permit pipeline</a></span></li>
+        <li><b>Building permit</b><span>The BP is the headline signal — volume &amp; valuation charted below</span></li>
+        <li><b>Trade permits</b><span>Electrical, plumbing, mechanical — build-out is underway</span></li>
+        <li><b>Signage &amp; final inspections</b><span>Sign permits and finals hint at an imminent opening</span></li>
+        <li><b>Certificate of Occupancy</b><span>Doors open — the CO feed is the lagging confirmation</span></li>
+      </ol>
+    </div>
+
+    <div class="grid-2">
+      <article class="card">
+        <h2>Commercial permit velocity</h2>
+        <p class="card-sub">Commercial permits issued per week, trailing 26 weeks</p>
+        <div class="chart" id="chart-velocity"></div>
+      </article>
+      <article class="card">
+        <h2>Commercial vs. residential issuance</h2>
+        <p class="card-sub">Weekly issued permits by class, trailing 26 weeks</p>
+        <div class="chart" id="chart-class"></div>
+      </article>
+      <article class="card">
+        <h2>Where the money is</h2>
+        <p class="card-sub">Commercial job valuation by permit type, trailing 30 days</p>
+        <div class="chart" id="chart-valuation"></div>
+      </article>
+      <article class="card">
+        <h2>Biggest commercial projects</h2>
+        <p class="card-sub">Top permits by declared job valuation, trailing 30 days</p>
+        <div id="top-projects" class="mini-table-wrap"></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ MAP ============ -->
+  <section id="panel-map" class="panel" role="tabpanel" hidden>
+    <div class="map-shell">
+      <div class="map-side">
+        <h2>Map explorer</h2>
+        <p class="card-sub">Click anywhere on the map for an area report — permits, openings, and zoning cases within the radius.</p>
+        <div class="map-controls">
+          <fieldset class="layer-toggles" id="layer-toggles">
+            <legend>Layers · trailing 90 days</legend>
+            <label><input type="checkbox" data-layer="building" checked><i class="swatch" style="background:#2a78d6"></i>Building permits (commercial)</label>
+            <label><input type="checkbox" data-layer="trades" checked><i class="swatch" style="background:#eb6834"></i>Trade permits (elec / plumb / mech)</label>
+            <label><input type="checkbox" data-layer="zoning" checked><i class="swatch" style="background:#1baf7a"></i>Zoning cases</label>
+            <label><input type="checkbox" data-layer="co" checked><i class="swatch" style="background:#4a3aa7"></i>Certificates of occupancy</label>
+          </fieldset>
+          <label class="radius-control">Report radius
+            <select id="radius-select">
+              <option value="400">¼ mile</option>
+              <option value="800" selected>½ mile</option>
+              <option value="1600">1 mile</option>
+            </select>
+          </label>
+        </div>
+        <div id="area-report" class="area-report">
+          <p class="hint">No area selected yet — click the map to survey a neighborhood, corridor, or site.</p>
+        </div>
+      </div>
+      <div id="map" class="map-canvas" aria-label="Map of Austin development activity"></div>
+    </div>
+  </section>
+
+  <!-- ============ PERMITS ============ -->
+  <section id="panel-permits" class="panel" role="tabpanel" hidden>
+    <div class="card">
+      <div class="feed-head">
+        <div>
+          <h2>Permit pipeline</h2>
+          <p class="card-sub">Issued construction &amp; trade permits, straight from the city's live feed</p>
+        </div>
+        <div class="feed-filters" id="permit-filters">
+          <select id="pf-window">
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <select id="pf-class">
+            <option value="Commercial" selected>Commercial only</option>
+            <option value="">All classes</option>
+          </select>
+          <select id="pf-type"><option value="">All permit types</option></select>
+          <select id="pf-district"><option value="">All districts</option></select>
+          <input type="search" id="pf-search" placeholder="Search address, description, applicant…">
+        </div>
+      </div>
+      <div id="permit-table" class="table-wrap" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============ ZONING ============ -->
+  <section id="panel-zoning" class="panel" role="tabpanel" hidden>
+    <div class="card">
+      <div class="feed-head">
+        <div>
+          <h2>Zoning &amp; entitlement cases</h2>
+          <p class="card-sub">Active and recent zoning cases — the earliest public signal that land use is changing</p>
+        </div>
+        <div class="feed-filters">
+          <input type="search" id="zf-search" placeholder="Search case number, address, request…">
+        </div>
+      </div>
+      <div id="zoning-list" class="case-list" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============ COUNCIL ============ -->
+  <section id="panel-council" class="panel" role="tabpanel" hidden>
+    <div class="council-grid">
+      <div class="card council-main">
+        <div class="feed-head">
+          <div>
+            <h2>Council watch</h2>
+            <p class="card-sub">City Council agenda items filtered through a CRE lens — what's up for debate, and what just moved</p>
+          </div>
+          <div class="feed-filters">
+            <input type="search" id="cf-search" placeholder="Search agenda items…">
+          </div>
+        </div>
+        <div class="chip-row" id="keyword-chips" aria-label="CRE topic filters"></div>
+        <div id="council-list" class="agenda-list" aria-live="polite"></div>
+      </div>
+      <aside class="card council-side">
+        <h2>Where the debate happens</h2>
+        <p class="card-sub">Agendas post ~a week ahead. These are the rooms where Austin land-use policy is made.</p>
+        <ul class="link-list" id="council-links"></ul>
+      </aside>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="foot-inner">
+    <p><strong>Sources</strong> — all data is fetched live in your browser from the
+      <a href="https://data.austintexas.gov" target="_blank" rel="noopener">City of Austin Open Data Portal</a>:
+      <a href="https://data.austintexas.gov/Building-and-Development/Issued-Construction-Permits/3syk-w9eu" target="_blank" rel="noopener">Issued Construction Permits</a> ·
+      <a href="https://data.austintexas.gov/Building-and-Development/Zoning-Cases/edir-dcnf" target="_blank" rel="noopener">Zoning Cases</a> ·
+      <a href="https://data.austintexas.gov/Building-and-Development/Certificates-Of-Occupancy/f9mz-m6dy" target="_blank" rel="noopener">Certificates of Occupancy</a> ·
+      <a href="https://data.austintexas.gov/City-Government/City-of-Austin-Council-Agenda-Items-Updates-Februa/sich-49ay" target="_blank" rel="noopener">Council Agenda Items</a>.
+    </p>
+    <p class="disclaimer">Unofficial tool for market research. Verify permit and case status with the
+      <a href="https://abc.austintexas.gov/" target="_blank" rel="noopener">City of Austin AB+C portal</a> before relying on it in a transaction.</p>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/config.js"></script>
+<script src="js/soda.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/views.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

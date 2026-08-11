@@ -15,6 +15,10 @@ on:
   schedule:
     - cron: "0 5 * * *"
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/refresh-data.yml"
+      - "scripts/fetch-snapshots.mjs"
 
 permissions:
   contents: write

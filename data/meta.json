@@ -1,0 +1,84 @@
+{
+  "fetchedAt": "2026-08-11T19:00:24.087Z",
+  "datasets": {
+    "permits": {
+      "fields": {
+        "date": "issue_date",
+        "applied": "applieddate",
+        "type": "permittype",
+        "typeDesc": "permit_type_desc",
+        "workClass": "work_class",
+        "classMapped": "permit_class_mapped",
+        "classDetail": "permit_class",
+        "number": "permit_number",
+        "status": "status_current",
+        "desc": "description",
+        "address": "original_address1",
+        "zip": "original_zip",
+        "district": "council_district",
+        "lat": "latitude",
+        "lon": "longitude",
+        "valuation": "total_job_valuation",
+        "link": "link",
+        "applicant": "applicant_org",
+        "contractor": "contractor_company_name",
+        "sqftNew": "total_new_add_sqft",
+        "sqftRemodel": "remodel_repair_sqft"
+      }
+    },
+    "zoning": {
+      "fields": {
+        "date": "status_date",
+        "number": "case_number",
+        "name": "case_name",
+        "desc": "proposed_zoning",
+        "status": "detailed_status",
+        "manager": "case_manager",
+        "address": "site_address",
+        "district": "council_district",
+        "lat": "latitude",
+        "lon": "longitude",
+        "fromZone": "existing_zoning",
+        "toZone": "proposed_zoning",
+        "link": "link"
+      }
+    },
+    "co": {
+      "fields": {
+        "date": "issue_date",
+        "number": "permit_number",
+        "type": "permit_type_desc",
+        "use": "description",
+        "desc": "description",
+        "status": "status_current",
+        "address": "original_address1",
+        "district": "council_district",
+        "lat": "latitude",
+        "lon": "longitude",
+        "link": "link"
+      }
+    },
+    "council": {
+      "fields": {
+        "date": "agenda_date",
+        "title": null,
+        "item": "item_number",
+        "dept": "lead_dept",
+        "status": "status",
+        "district": null,
+        "caseNo": null,
+        "link": null,
+        "lat": null,
+        "lon": null
+      }
+    }
+  },
+  "files": {
+    "permits_recent": 8000,
+    "zoning_recent": 426,
+    "co_recent": 1772,
+    "council_recent": 10,
+    "permits_daily_com": 176,
+    "permits_daily_res": 190
+  }
+}

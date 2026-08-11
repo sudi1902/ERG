@@ -514,7 +514,9 @@ const Views = (() => {
     });
     setTile("kpi-council", {
       value: Charts.comma(flagged.length),
-      note: "agenda items matching the CRE lens",
+      note: flagged.length
+        ? "agenda items matching the CRE lens"
+        : "none within ±90d — see Council watch for the latest",
     });
   }
 

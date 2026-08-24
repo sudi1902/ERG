@@ -1,0 +1,55 @@
+{
+  "symbols": ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "AMD", "META", "GOOGL"],
+  "strategy": "momentum",
+  "strategy_params": {
+    "fast": 12,
+    "slow": 26,
+    "regime": 100,
+    "min_roc_pct": 0.5
+  },
+  "starting_equity": 25000.0,
+  "session_start": "09:30",
+  "session_end": "16:00",
+  "timezone": "America/New_York",
+
+  "risk": {
+    "risk_per_trade_pct": 0.5,
+    "max_position_pct": 20.0,
+    "max_positions": 5,
+    "max_gross_exposure_pct": 100.0,
+    "max_daily_loss_pct": 2.0,
+    "daily_profit_target_pct": 1.0,
+    "max_trades_per_day": 20,
+    "atr_period": 14,
+    "stop_atr_mult": 2.0,
+    "target_atr_mult": 3.0,
+    "trail_atr_mult": 0.0,
+    "allow_shorts": true,
+    "flat_at_close": true
+  },
+
+  "costs": {
+    "commission_per_share": 0.0,
+    "commission_min": 0.0,
+    "commission_pct": 0.0,
+    "slippage_bps": 2.0,
+    "spread_bps": 1.0
+  },
+
+  "data": {
+    "provider": "stooq",
+    "timeframe": "1d",
+    "lookback_days": 400,
+    "cache_dir": ".cache/tradingbot",
+    "csv_dir": "data",
+    "feed": "iex"
+  },
+
+  "broker": {
+    "name": "paper",
+    "mode": "paper",
+    "base_url": "https://paper-api.alpaca.markets",
+    "key_id_env": "ALPACA_KEY_ID",
+    "secret_env": "ALPACA_SECRET_KEY"
+  }
+}

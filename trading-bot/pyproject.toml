@@ -1,0 +1,21 @@
+[project]
+name = "tradingbot"
+version = "0.1.0"
+description = "A risk-first, paper-by-default equities trading bot with a realistic backtester."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+# Nothing here is required. The bot runs on the standard library alone; these
+# only matter if you want to plot equity curves yourself.
+plots = ["matplotlib>=3.7"]
+
+[project.scripts]
+tradingbot = "tradingbot.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tradingbot*"]

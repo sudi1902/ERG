@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-31T11:30:00.201Z",
+  "fetchedAt": "2026-09-01T09:52:22.971Z",
   "datasets": {
     "permits": {
       "fields": {
@@ -85,11 +85,11 @@
     }
   },
   "files": {
-    "permits_recent": 4203,
+    "permits_recent": 4164,
     "zoning_recent": 399,
-    "co_recent": 846,
+    "co_recent": 845,
     "council_recent": 266,
-    "permits_daily_com": 174,
+    "permits_daily_com": 175,
     "permits_daily_res": 189
   }
 }

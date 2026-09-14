@@ -89,8 +89,17 @@
         <h2>Map explorer</h2>
         <p class="card-sub">Click anywhere on the map for an area report — permits, openings, and zoning cases within the radius.</p>
         <div class="map-controls">
+          <fieldset class="layer-toggles window-control">
+            <legend>Activity window</legend>
+            <div class="chip-row" id="window-chips" role="radiogroup" aria-label="Time window for all map layers">
+              <button class="chip" data-days="30" role="radio" aria-checked="false">30 days</button>
+              <button class="chip on" data-days="90" role="radio" aria-checked="true">3 months</button>
+              <button class="chip" data-days="180" role="radio" aria-checked="false">6 months</button>
+              <button class="chip" data-days="365" role="radio" aria-checked="false">12 months</button>
+            </div>
+          </fieldset>
           <fieldset class="layer-toggles" id="layer-toggles">
-            <legend>Layers · trailing 90 days</legend>
+            <legend id="layer-legend">Layers · trailing 3 months</legend>
             <label><input type="checkbox" data-layer="building" checked><i class="swatch" style="background:#2a78d6"></i>Building permits (commercial)</label>
             <label><input type="checkbox" data-layer="trades" checked><i class="swatch" style="background:#eb6834"></i>Trade permits (elec / plumb / mech)</label>
             <label><input type="checkbox" data-layer="zoning" checked><i class="swatch" style="background:#1baf7a"></i>Zoning cases</label>
